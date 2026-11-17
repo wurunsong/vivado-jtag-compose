@@ -1,0 +1,17 @@
+x-vivado-lab: &vivado-lab
+  image: "${VIVADO_IMAGE:-ghcr.io/wurunsong/vivado-lab:2018.3}"
+  pull_policy: missing
+  command:
+    - bash
+    - -c
+    - >-
+      source /opt/Xilinx/Vivado_Lab/2018.3/settings64.sh &&
+      exec hw_server -stcp::3121
+
+services:
+  lab-a:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_A:?Set JTAG_A in .env}:${JTAG_A:?Set JTAG_A in .env}:rw"
+    ports:
+      - "127.0.0.1:13121:3121"

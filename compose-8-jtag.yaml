@@ -1,0 +1,66 @@
+x-vivado-lab: &vivado-lab
+  image: "${VIVADO_IMAGE:-ghcr.io/wurunsong/vivado-lab:2018.3}"
+  pull_policy: missing
+  command:
+    - bash
+    - -c
+    - >-
+      source /opt/Xilinx/Vivado_Lab/2018.3/settings64.sh &&
+      exec hw_server -stcp::3121
+
+services:
+  lab-a:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_A:?Set JTAG_A in .env}:${JTAG_A:?Set JTAG_A in .env}:rw"
+    ports:
+      - "127.0.0.1:13121:3121"
+
+  lab-b:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_B:?Set JTAG_B in .env}:${JTAG_B:?Set JTAG_B in .env}:rw"
+    ports:
+      - "127.0.0.1:13122:3121"
+
+  lab-c:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_C:?Set JTAG_C in .env}:${JTAG_C:?Set JTAG_C in .env}:rw"
+    ports:
+      - "127.0.0.1:13123:3121"
+
+  lab-d:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_D:?Set JTAG_D in .env}:${JTAG_D:?Set JTAG_D in .env}:rw"
+    ports:
+      - "127.0.0.1:13124:3121"
+
+  lab-e:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_E:?Set JTAG_E in .env}:${JTAG_E:?Set JTAG_E in .env}:rw"
+    ports:
+      - "127.0.0.1:13125:3121"
+
+  lab-f:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_F:?Set JTAG_F in .env}:${JTAG_F:?Set JTAG_F in .env}:rw"
+    ports:
+      - "127.0.0.1:13126:3121"
+
+  lab-g:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_G:?Set JTAG_G in .env}:${JTAG_G:?Set JTAG_G in .env}:rw"
+    ports:
+      - "127.0.0.1:13127:3121"
+
+  lab-h:
+    <<: *vivado-lab
+    devices:
+      - "${JTAG_H:?Set JTAG_H in .env}:${JTAG_H:?Set JTAG_H in .env}:rw"
+    ports:
+      - "127.0.0.1:13128:3121"
