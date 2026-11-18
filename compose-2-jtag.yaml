@@ -1,6 +1,6 @@
 x-vivado-lab: &vivado-lab
-  image: "${VIVADO_IMAGE:-ghcr.io/wurunsong/vivado-lab:2018.3}"
-  pull_policy: missing
+  image: "${VIVADO_IMAGE:-vivado-lab:2018.3}"
+  pull_policy: never
   command:
     - bash
     - -c

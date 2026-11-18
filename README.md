@@ -4,9 +4,76 @@
 
 ## 准备
 
-- Ubuntu 上已安装 Docker Engine 和 Docker Compose v2。Ubuntu 在虚拟机里运行时，把要使用的下载线直通给该虚拟机。
-- 默认镜像为 `ghcr.io/wurunsong/vivado-lab:2018.3`，其中 Vivado Lab 装在 `/opt/Xilinx/Vivado_Lab/2018.3`。需要自行制作镜像时，从 AMD 获取 Linux Lab Edition 安装包。[AMD 2018.3 下载页](https://www.amd.com/en/support/downloads/adaptive-socs-and-fpgas/development-tools/2018-3.html)
+- x86-64 Ubuntu 上已安装 Docker Engine、Docker Compose v2 和 `usbutils`。Ubuntu 在虚拟机里运行时，把要使用的下载线直通给该虚拟机。[Docker Engine 安装文档](https://docs.docker.com/engine/install/ubuntu/)
 - 用来连接的 Hardware Manager 同样使用 Vivado Lab 2018.3。
+
+## 制作本地镜像
+
+打开 AMD 下载页，在 **Vivado Lab Solutions – 2018.3** 下选择 **Vivado 2018.3: Lab Edition - Linux**（593.81 MB）。按下载页提示登录，将安装包保存到运行 Docker 的 Ubuntu。安装包的原始文件名为 `Xilinx_Vivado_Lab_Lin_2018.3_1207_2324.tar.gz`。[AMD 2018.3 下载页](https://www.amd.com/en/support/downloads/adaptive-socs-and-fpgas/development-tools/2018-3.html)
+
+1. 在 Ubuntu 终端拉取 `linux/amd64` 的 Ubuntu 18.04 基础镜像，然后启动临时容器。将 `archive` 改成安装包的实际绝对路径。Ubuntu 18.04 是镜像里的运行环境，虚拟机可以使用 Ubuntu 24.04。[Vivado 2018.3 安装指南](https://docs.amd.com/v/u/2018.3-English/ug973-vivado-release-notes-install-license)
+
+   ```bash
+   sudo docker pull --platform linux/amd64 ubuntu:18.04
+
+   archive='/实际路径/Xilinx_Vivado_Lab_Lin_2018.3_1207_2324.tar.gz'
+   test -f "$archive" && sudo docker run --pull=never --platform linux/amd64 \
+     -it --name lab183-build \
+     --mount "type=bind,source=$archive,target=/tmp/vivado-lab.tar.gz,readonly" \
+     ubuntu:18.04 bash
+   ```
+
+   已用 `docker load` 导入 amd64 基础镜像时，可以从 `archive=...` 开始。临时容器中途退出后，可用 `sudo docker start -ai lab183-build` 继续。
+
+2. 在临时容器里的终端安装依赖、解压安装包并生成配置。如果 `ConfigGen` 显示选项，选择 **Vivado Lab Edition**。记下它打印的配置文件路径。
+
+   ```bash
+   apt-get update && apt-get install -y --no-install-recommends \
+     ca-certificates libtinfo5 libncurses5 libudev1 \
+     libusb-1.0-0 libusb-0.1-4 \
+     libx11-6 libxext6 libxrender1 libxtst6 libxi6 \
+     libsm6 libxrandr2 libxft2 libfontconfig1 fonts-dejavu-core
+
+   mkdir -p /tmp/lab
+   tar -xzf /tmp/vivado-lab.tar.gz -C /tmp/lab --strip-components=1
+   cd /tmp/lab
+   ./xsetup -b ConfigGen
+   ```
+
+3. 仍在临时容器里，将 `cfg` 设为安装器打印的完整路径。阅悉并同意安装条款后执行以下命令。安装目标必须为 `/opt/Xilinx`，Compose 会从该目录加载 Vivado 2018.3 的环境脚本。[Vivado 2018.3 批量安装说明](https://docs.amd.com/api/khub/documents/4ahtxBp53qH38bUxWqDd0A/content#page=41)
+
+   ```bash
+   cfg=/root/.Xilinx/install_config.txt
+   ls -l "$cfg" &&
+     sed -i 's|^Destination=.*|Destination=/opt/Xilinx|' "$cfg" &&
+     grep -Fx 'Destination=/opt/Xilinx' "$cfg" &&
+     ./xsetup --agree XilinxEULA,3rdPartyEULA,WebTalkTerms \
+       --batch Install --config "$cfg" &&
+     ls -l /opt/Xilinx/Vivado_Lab/2018.3/settings64.sh \
+       /opt/Xilinx/Vivado_Lab/2018.3/bin/{vivado_lab,hw_server}
+   ```
+
+4. 确认上一步成功后，清理容器里的解压目录并退出。
+
+   ```bash
+   cd /
+   rm -rf /tmp/lab
+   exit
+   ```
+
+5. 回到 Ubuntu 终端，将已安装的容器保存为 Compose 使用的镜像 `vivado-lab:2018.3`。`docker commit` 写入镜像时可能要等几分钟，完成后会打印镜像 ID。
+
+   ```bash
+   sudo docker commit lab183-build vivado-lab:2018.3
+   sudo docker image ls vivado-lab:2018.3
+   ```
+
+6. 用 Tcl 模式验证容器能启动 Vivado Lab。看到 `Vivado Lab v2018.3` 和 Tcl 提示符后，输入 `exit` 退出。
+
+   ```bash
+   sudo docker run --pull=never --rm -it vivado-lab:2018.3 \
+     bash -c 'source /opt/Xilinx/Vivado_Lab/2018.3/settings64.sh && exec vivado_lab -mode tcl'
+   ```
 
 ## 设置下载线
 
@@ -18,17 +85,7 @@ cd vivado-jtag-compose
 cp .env.example .env
 ```
 
-在 `.env` 里为所选配置填写设备路径。同一次启动使用的下载线要填不同的路径。
-
-## 拉取镜像
-
-默认的 GHCR 镜像可匿名拉取，Compose 启动时会拉取本机缺少的镜像。也可以在 Ubuntu 上提前拉取。
-
-```bash
-sudo docker pull ghcr.io/wurunsong/vivado-lab:2018.3
-```
-
-已有 `.env` 时，将其中的 `VIVADO_IMAGE` 更新为 `ghcr.io/wurunsong/vivado-lab:2018.3`。如果要使用已有的本地镜像，可以设置 `VIVADO_IMAGE=vivado-lab:2018.3`。
+在 `.env` 里为所选配置填写设备路径。同一次启动使用的下载线要填不同的路径。已有 `.env` 时，确认其中的 `VIVADO_IMAGE` 为 `vivado-lab:2018.3`，或者删除这一行使用默认值。Compose 使用本地镜像，启动前确认镜像已制作完成。
 
 ## 启动与连接
 
