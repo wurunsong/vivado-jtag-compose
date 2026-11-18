@@ -136,3 +136,22 @@ getent -s files hosts vivado-a vivado-b
 | `lab-h` | `vivado-h` | `13128` |
 
 在 Vivado Lab 2018.3 的实测环境中，一个会话只能连接一个 `hw_server`。要同时使用多个容器，可以为每路启动一个独立的 Vivado Lab 实例。
+
+### Windows 在局域网直连
+
+Windows 可以访问 Ubuntu 的内网 IP 时，将 Compose 里的 `hw_server` 端口发布到该地址。在 Ubuntu 上用 `ip -br -4 addr` 查看地址，将示例中的 `192.168.1.100` 换成 Windows 能访问的 Ubuntu 地址，然后从仓库目录执行。[Docker 端口发布说明](https://docs.docker.com/engine/network/port-publishing)
+
+```bash
+sed -i.bak 's/"127\.0\.0\.1:/"192.168.1.100:/' compose-8-jtag.yaml
+sudo docker compose -f compose-8-jtag.yaml up -d
+```
+
+这会将八路端口 `13121` 到 `13128` 绑定到 Ubuntu 的内网 IP。Compose 会重建端口绑定有变化的容器。
+
+在 Windows PowerShell 中测试 A 路端口：
+
+```powershell
+Test-NetConnection 192.168.1.100 -Port 13121
+```
+
+在 Windows 的 Vivado Lab 2018.3 中打开 **Hardware Manager → Open New Target → Remote server**。**Host name** 填 Ubuntu 的内网 IP，**Port** 按上表填写。例如 A 路用 `192.168.1.100:13121`。
