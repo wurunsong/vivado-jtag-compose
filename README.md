@@ -97,10 +97,36 @@ cp .env.example .env
 
 更换配置后，如果要停止并移除上一套配置多出的容器，在新的启动命令末尾加 `--remove-orphans`。查看状态时使用与启动时相同的 `-f` 参数，将 `up -d` 换成 `ps`。
 
-在 Ubuntu 的 Hardware Manager 里选择 **Open Target → Open New Target → Remote server**。主机填 `127.0.0.1`，`lab-a` 到 `lab-h` 的端口依次是 `13121` 到 `13128`。分别核对下载线序列号，再对相应板卡操作。
+在 Ubuntu 的 Hardware Manager 里选择 **Open Target → Open New Target → Remote server**。主机填 `127.0.0.1`，`lab-a` 到 `lab-h` 的端口依次是 `13121` 到 `13128`。在 Hardware Targets 列表确认相应下载线。多根线报告相同序列号时，可以按端口和 `.env` 中映射的 USB 节点区分。
 
 如果八路配置的 C 线重插后设备编号发生变化，更新 `.env` 的 `JTAG_C`。下面的命令会重建 C 路容器。
 
 ```bash
 sudo docker compose -f compose-8-jtag.yaml up -d --force-recreate lab-c
 ```
+
+### 配置主机名别名
+
+`hosts.example` 提供 `vivado-a` 到 `vivado-h` 八个别名。它们都解析到 `127.0.0.1`。在 Docker 所在的 Ubuntu 上运行 Hardware Manager 时，从仓库目录执行：
+
+```bash
+sudo python3 install-hostnames.py
+getent -s files hosts vivado-a vivado-b
+```
+
+安装命令将缺少的别名追加到 `/etc/hosts`。已有同名记录指向其他 IP 时，命令会提示冲突，可以用 `sudoedit /etc/hosts` 核对。
+
+在 **Remote server** 向导中分别填写主机名和端口。单路用 A，两路用 A 和 B，八路用表中全部配置。
+
+| Compose 服务 | Host name | Port |
+| --- | --- | --- |
+| `lab-a` | `vivado-a` | `13121` |
+| `lab-b` | `vivado-b` | `13122` |
+| `lab-c` | `vivado-c` | `13123` |
+| `lab-d` | `vivado-d` | `13124` |
+| `lab-e` | `vivado-e` | `13125` |
+| `lab-f` | `vivado-f` | `13126` |
+| `lab-g` | `vivado-g` | `13127` |
+| `lab-h` | `vivado-h` | `13128` |
+
+在 Vivado Lab 2018.3 的实测环境中，一个会话只能连接一个 `hw_server`。要同时使用多个容器，可以为每路启动一个独立的 Vivado Lab 实例。

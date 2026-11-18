@@ -1,0 +1,9 @@
+# Hostname aliases for Hardware Manager on the Ubuntu machine running Docker.
+127.0.0.1 vivado-a
+127.0.0.1 vivado-b
+127.0.0.1 vivado-c
+127.0.0.1 vivado-d
+127.0.0.1 vivado-e
+127.0.0.1 vivado-f
+127.0.0.1 vivado-g
+127.0.0.1 vivado-h
